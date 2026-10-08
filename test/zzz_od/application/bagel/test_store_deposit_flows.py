@@ -364,6 +364,7 @@ def test_store_stops_when_swapped_slot_has_different_item(
     mark = BagelSlotMark(4, RESULT_SLOT_CENTERS[4], 'S', '材料')
     choice = StoreChoice(ACTION_SWAP, 4, 4, mark)
     monkeypatch.setattr(op, '_search_ready', lambda: True)
+    monkeypatch.setattr(op._panel_guard, 'observe', lambda *_: True)
     monkeypatch.setattr(op, '_search_complete', lambda: True)
     monkeypatch.setattr(
         'zzz_od.application.bagel.bagel_store.inspect_occupied', lambda *_args: [mark],
