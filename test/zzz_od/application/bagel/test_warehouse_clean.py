@@ -282,20 +282,20 @@ def test_settle_passes_custom_filter_to_clean(
 
 
 @pytest.mark.parametrize('auto_clean', [True, False])
-def test_settle_full_stops_before_sale(
+def test_settle_full_limits_sale_retry(
     test_context: TestContext, controller: FixtureController,
     monkeypatch: pytest.MonkeyPatch, auto_clean: bool,
 ) -> None:
-    """仓满且安全箱仍有物资时，不清理、不再次入仓。"""
-    events = _patch_settle_ops(monkeypatch, [BagelDeposit.STATUS_FULL])
+    """开启清理时最多出售再入仓一次；关闭清理则立即停止。"""
+    events = _patch_settle_ops(monkeypatch, [BagelDeposit.STATUS_FULL, BagelDeposit.STATUS_FULL])
     controller.set_phases([{'frame': ('贝果-仓库', '空局仓库-原生1080')}])
     op = WatchedSettle(test_context, auto_clean=auto_clean)
     enter_running_state(test_context)
     try:
         result = op.execute()
         assert not result.success
-        assert ('禁止批量出售' if auto_clean else '仓库已满') in result.status
-        assert events == ['deposit']
+        assert ('视为爆仓' if auto_clean else '自动清理关闭') in result.status
+        assert events == (['deposit', 'clean', 'deposit'] if auto_clean else ['deposit'])
     finally:
         reset_running_state(test_context, op)
 
@@ -346,7 +346,7 @@ def test_settle_preserves_verified_deposit_terminal(
         assert result.success, result.status
         assert result.status == deposit_status
         should_clean = auto_clean and deposit_status == BagelDeposit.STATUS_DONE
-        assert events == (['deposit', 'clean', 'capacity'] if should_clean else ['deposit', 'capacity'])
+        assert events == (['deposit', 'capacity', 'clean', 'capacity'] if should_clean else ['deposit', 'capacity'])
         assert not controller.click_hit_area('贝果-仓库', '返回研究站')
     finally:
         reset_running_state(test_context, op)
