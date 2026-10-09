@@ -64,3 +64,18 @@ def test_unknown_safe_never_reports_deposit_success(
         result = op.execute()
     assert not result.success and '状态不明' in result.status
     assert len(controller.recorded_clicks) == int(after_click)
+
+
+@pytest.mark.parametrize('empty', [False, True])
+def test_settlement_deposit_clicks_only_once(
+    test_context: TestContext, controller: TransferController, empty: bool,
+) -> None:
+    """残留只看新帧不重复点；出售清空后仍执行唯一一次重试点击。"""
+    state = '空局仓库-原生1080' if empty else '满仓安全箱余一件-20260924'
+    controller.set_phases([{'frame': ('贝果-仓库', state)}])
+    op = WatchedDeposit(test_context, return_on_remaining=True, click_when_empty=empty)
+    with running_operation(op):
+        result = op.execute()
+    assert result.success, result.status
+    assert result.status == (op.STATUS_EMPTY if empty else op.STATUS_FULL)
+    assert len(controller.recorded_clicks) == 1
