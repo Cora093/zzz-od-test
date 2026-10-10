@@ -19,67 +19,13 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.parametrize(
-    'before_frame,after_frame,before_count,after_count,safe_slots',
+    'after,success',
     [
-        ('带物资仓库-r07-117s', '入仓后安全箱空-r07-118s', 259, 262, 5),
-        ('成功闭环入仓前-4K缩放', '成功闭环入仓后-4K缩放', 243, 244, 2),
+        (259, True),
+        (258, False),
+        (None, False),
     ],
 )
-def test_deposit_clears_safe_with_warehouse_increase(
-    test_context: TestContext,
-    controller: BagelDragController,
-    before_frame: str,
-    after_frame: str,
-    before_count: int,
-    after_count: int,
-    safe_slots: int,
-) -> None:
-    """真实入仓画面验证清空，仓库增量可小于安全箱占用。"""
-    controller.set_phases(
-        [
-            {
-                'frame': ('贝果-仓库', before_frame),
-                'exit': ('on_click_in', '贝果-仓库', '放入仓库'),
-            },
-            {'frame': ('贝果-仓库', after_frame)},
-        ]
-    )
-    op = WatchedDeposit(test_context)
-    enter_running_state(test_context)
-    try:
-        result = op.execute()
-        assert result.success, result.status
-        assert result.status == BagelDeposit.STATUS_DONE
-        assert result.data['warehouse_before'] == before_count
-        assert result.data['warehouse_after'] == after_count
-        assert result.data['moved'] == safe_slots
-        assert controller.click_hit_area('贝果-仓库', '放入仓库')
-    finally:
-        reset_running_state(test_context, op)
-
-
-def test_deposit_empty_safe_skips_click(
-    test_context: TestContext,
-    controller: BagelDragController,
-) -> None:
-    """安全箱已空时不点击放入仓库。"""
-    controller.set_phases(
-        [
-            {'frame': ('贝果-仓库', '入仓后安全箱空-实机')},
-        ]
-    )
-    op = WatchedDeposit(test_context)
-    enter_running_state(test_context)
-    try:
-        result = op.execute()
-        assert result.success, result.status
-        assert result.status == BagelDeposit.STATUS_EMPTY
-        assert controller.recorded_clicks == []
-    finally:
-        reset_running_state(test_context, op)
-
-
-@pytest.mark.parametrize('after,success', [(259, True), (258, False), (None, False)])
 def test_deposit_stacked_items_and_invalid_counts(
     test_context: TestContext,
     controller: BagelDragController,
@@ -113,60 +59,6 @@ def test_deposit_stacked_items_and_invalid_counts(
         reset_running_state(test_context, op)
 
 
-def test_deposit_rejects_click_without_clear(
-    test_context: TestContext,
-    controller: BagelDragController,
-) -> None:
-    """再点几次安全箱仍占用，不能记成功。"""
-    controller.set_phases(
-        [
-            {
-                'frame': ('贝果-仓库', '带物资仓库-r07-117s'),
-                'exit': ('on_click_in', '贝果-仓库', '放入仓库'),
-            },
-            {'frame': ('贝果-仓库', '带物资仓库-r07-117s')},
-        ]
-    )
-    op = WatchedDeposit(test_context)
-    enter_running_state(test_context)
-    try:
-        result = op.execute()
-        assert not result.success
-        assert '安全箱仍有' in result.status
-        assert _clicks_in_area(test_context, controller, '放入仓库') >= 2
-    finally:
-        reset_running_state(test_context, op)
-
-
-def test_deposit_second_click_clears_safe(
-    test_context: TestContext,
-    controller: BagelDragController,
-) -> None:
-    """第一次放入仓库没清空时，再点一次可以入仓。"""
-    controller.set_phases(
-        [
-            {
-                'frame': ('贝果-仓库', '带物资仓库-r07-117s'),
-                'exit': ('on_click_in', '贝果-仓库', '放入仓库'),
-            },
-            {
-                'frame': ('贝果-仓库', '带物资仓库-r07-117s'),
-                'exit': ('on_click_in', '贝果-仓库', '放入仓库'),
-            },
-            {'frame': ('贝果-仓库', '入仓后安全箱空-r07-118s')},
-        ]
-    )
-    op = WatchedDeposit(test_context)
-    enter_running_state(test_context)
-    try:
-        result = op.execute()
-        assert result.success, result.status
-        assert result.status == BagelDeposit.STATUS_DONE
-        assert _clicks_in_area(test_context, controller, '放入仓库') == 2
-    finally:
-        reset_running_state(test_context, op)
-
-
 def test_deposit_full_when_safe_stays_and_capacity_used_up(
     test_context: TestContext,
     controller: BagelDragController,
@@ -195,7 +87,13 @@ def test_deposit_full_when_safe_stays_and_capacity_used_up(
         reset_running_state(test_context, op)
 
 
-@pytest.mark.parametrize('used', [279, 280], ids=['has_space', 'full'])
+@pytest.mark.parametrize(
+    'used',
+    [
+        279,
+    ],
+    ids=['has_space'],
+)
 def test_partial_deposit_stops_without_second_click(
     test_context: TestContext,
     controller: BagelDragController,

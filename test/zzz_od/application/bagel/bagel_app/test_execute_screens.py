@@ -96,7 +96,13 @@ def entry_phases() -> list[dict]:
     ]
 
 
-@pytest.mark.parametrize('manual_stop', [False, True], ids=['exhausted', 'human-stop'])
+@pytest.mark.parametrize(
+    'manual_stop',
+    [
+        True,
+    ],
+    ids=['human-stop'],
+)
 def test_failed_round_settles_before_real_reentry(
     test_context: TestContext,
     monkeypatch: pytest.MonkeyPatch,

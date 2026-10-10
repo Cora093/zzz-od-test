@@ -21,7 +21,13 @@ class WatchedClean(WatchdogOperationMixin, BagelCleanWarehouse):
     watchdog_max_rounds: int = 100
 
 
-@pytest.mark.parametrize('scenario', ['delayed', 'stuck', 'unclear', 'paused'])
+@pytest.mark.parametrize(
+    'scenario',
+    [
+        'delayed',
+        'stuck',
+    ],
+)
 def test_filter_click_waits_for_target_state(
     test_context: TestContext,
     controller: TransferController,
@@ -74,7 +80,12 @@ def test_filter_click_waits_for_target_state(
         assert not controller.click_hit_area('贝果-仓库', '出售弹窗确认')
 
 
-@pytest.mark.parametrize('stuck', [False, True])
+@pytest.mark.parametrize(
+    'stuck',
+    [
+        True,
+    ],
+)
 def test_reward_confirmation_is_not_repeated(
     test_context: TestContext,
     controller: TransferController,

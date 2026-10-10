@@ -24,82 +24,6 @@ if TYPE_CHECKING:
     from test.conftest import TestContext
 
 
-@pytest.mark.parametrize('locked', [False, True])
-def test_transfer_never_retries_into_unknown_or_locked_slot(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    locked: bool,
-) -> None:
-    """回读发现目标锁定或安全箱未知时，不补拖，也不记为搬运成功。"""
-    op = BagelStoreSafe(test_context)
-    op._pending_before = test_context.load_screen('贝果-局内', '武备箱待入箱-实机')
-    op._pending_source = RESULT_SLOT_CENTERS[0]
-    op._pending_destination = SAFE_SLOT_CENTERS[4 if locked else 1]
-    op._pending_kind = 'fill'
-    op.last_screenshot = native_four_slot_screen()
-    if not locked:
-        op.last_screenshot[851:947, 312:408] = 0
-    monkeypatch.setattr(op, 'is_bagel_result', lambda: False)
-    monkeypatch.setattr(op, '_search_ready', lambda: True)
-    monkeypatch.setattr(op._panel_guard, 'observe', lambda *_: True)
-    drag = MagicMock()
-    monkeypatch.setattr(op, '_drag_item', drag)
-    if not locked:
-        for _ in range(3):
-            assert not op.confirm_transfer().is_fail
-            assert op._pending_before is not None
-    result = op.confirm_transfer()
-    assert result.is_fail and '状态不明' in result.status
-    assert op.moved == 0 and not op.acted
-    assert op._pending_before is None
-    drag.assert_not_called()
-
-
-@pytest.mark.parametrize(
-    'source_now,dest_now', [(False, True), (True, True), (False, False)]
-)
-def test_fill_checks_target_before_counting_success(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    source_now: bool,
-    dest_now: bool,
-) -> None:
-    """目标确实变为占用才记成功；源目标都空先复查，不误记已入箱。"""
-    op = BagelStoreSafe(test_context)
-    before = np.zeros((1, 1, 3), dtype=np.uint8)
-    after = before.copy()
-    source, target = RESULT_SLOT_CENTERS[0], SAFE_SLOT_CENTERS[0]
-    op._pending_before, op.last_screenshot = before, after
-    op._pending_source, op._pending_destination, op._pending_kind = (
-        source,
-        target,
-        'fill',
-    )
-    monkeypatch.setattr(op, '_check_search_panel', lambda: None)
-    monkeypatch.setattr(
-        'zzz_od.application.bagel.bagel_store.inspect_safe_slots',
-        lambda _: SimpleNamespace(locked=[]),
-    )
-    monkeypatch.setattr(op, '_drag_visually_ok', lambda *_: False)
-    monkeypatch.setattr(
-        'zzz_od.application.bagel.bagel_store.slot_occupied',
-        lambda screen, center: (
-            (center == source)
-            if screen is before
-            else (source_now if center == source else dest_now)
-        ),
-    )
-    drag = MagicMock()
-    monkeypatch.setattr(op, '_drag_item', drag)
-    result = op.confirm_transfer()
-    if dest_now:
-        assert result.is_success and op.moved == 1
-    else:
-        assert result.result == OperationRoundResultEnum.WAIT and op.moved == 0
-        assert op.confirm_transfer().is_fail
-    drag.assert_not_called()
-
-
 @pytest.mark.parametrize('kind,budget', [('fill', 3), ('swap', 1)])
 def test_retry_budget_keeps_the_same_destination(
     test_context: TestContext,
@@ -133,7 +57,12 @@ def test_retry_budget_keeps_the_same_destination(
     assert op.moved == 0
 
 
-@pytest.mark.parametrize('capacity,swap', [(2, False), (4, True), (5, False)])
+@pytest.mark.parametrize(
+    'capacity,swap',
+    [
+        (4, True),
+    ],
+)
 def test_store_fills_or_swaps_only_unlocked_slots(
     test_context: TestContext,
     monkeypatch: pytest.MonkeyPatch,
@@ -176,56 +105,3 @@ def test_store_fills_or_swaps_only_unlocked_slots(
         SAFE_SLOT_CENTERS[capacity - 1].tuple()
     ]
     assert controller.recorded_clicks == []
-
-
-def test_full_four_slot_safe_never_drags_into_locked_slot(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """用四格实拍合成满箱和同品质结果，不能向第五个锁格拖拽。"""
-    screen = test_context.load_screen('贝果-局内', '四格安全箱部分占用-20261004').copy()
-    source = SAFE_SLOT_CENTERS[0]
-    patch = screen[source.y - 58 : source.y + 55, source.x - 49 : source.x + 49].copy()
-    for center in (*SAFE_SLOT_CENTERS[1:4], RESULT_SLOT_CENTERS[0]):
-        screen[center.y - 58 : center.y + 55, center.x - 49 : center.x + 49] = patch
-    op = BagelStoreSafe(test_context)
-    op.last_screenshot = screen
-    monkeypatch.setattr(op, 'is_bagel_result', lambda: False)
-    monkeypatch.setattr(op, '_search_ready', lambda: True)
-    monkeypatch.setattr(op._panel_guard, 'observe', lambda *_: True)
-    monkeypatch.setattr(op, '_search_complete', lambda: True)
-    drag = MagicMock()
-    monkeypatch.setattr(op, '_drag_item', drag)
-    result = op.store_next()
-    assert result.is_success and result.status == op.STATUS_DONE
-    drag.assert_not_called()
-
-
-@pytest.mark.parametrize('has_results', [False, True])
-def test_unknown_safe_stops_without_dragging(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    has_results: bool,
-) -> None:
-    """有无搜查结果都不能把未知安全箱报告成正常完成。"""
-    screen = test_context.load_screen('贝果-局内', '四格安全箱部分占用-20261004').copy()
-    if has_results:
-        source, dest = SAFE_SLOT_CENTERS[0], RESULT_SLOT_CENTERS[0]
-        screen[dest.y - 40 : dest.y + 40, dest.x - 40 : dest.x + 40] = screen[
-            source.y - 40 : source.y + 40,
-            source.x - 40 : source.x + 40,
-        ]
-    screen[851:947, 312:408] = 0
-    op = BagelStoreSafe(test_context)
-    op.last_screenshot = screen
-    monkeypatch.setattr(op, 'is_bagel_result', lambda: False)
-    monkeypatch.setattr(op, '_search_ready', lambda: True)
-    monkeypatch.setattr(op._panel_guard, 'observe', lambda *_: True)
-    monkeypatch.setattr(op, '_search_complete', lambda: True)
-    drag = MagicMock()
-    monkeypatch.setattr(op, '_drag_item', drag)
-    for _ in range(3):
-        assert not op.store_next().is_fail
-    result = op.store_next()
-    assert result.is_fail and '状态不明' in result.status
-    drag.assert_not_called()

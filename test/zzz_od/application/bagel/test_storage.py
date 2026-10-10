@@ -101,51 +101,12 @@ def test_store_preserves_panel_until_explicit_close(
         reset_running_state(test_context, close)
 
 
-def test_store_empty_result_preserves_panel_without_drag(
-    test_context: TestContext,
-    controller: BagelDragController,
-) -> None:
-    """结果格已空时不拖拽，也不关闭面板。"""
-    controller.set_phases([{'frame': ('贝果-局内', '武备箱已入箱-实机')}])
-    op = WatchedStore(test_context)
-    enter_running_state(test_context)
-    try:
-        result = op.execute()
-        assert result.success, result.status
-        assert result.status == BagelStoreSafe.STATUS_EMPTY
-        assert result.data['moved'] == 0
-        assert controller.recorded_drags == []
-        assert controller.recorded_clicks == []
-    finally:
-        reset_running_state(test_context, op)
-
-
-def test_store_stops_when_drag_has_no_effect(
-    test_context: TestContext,
-    controller: BagelDragController,
-) -> None:
-    """填空最多首次加三次重拖，仍不变就停，不继续盲拖。"""
-    controller.set_phases(
-        [
-            {'frame': ('贝果-局内', '武备箱待入箱-实机'), 'exit': ('on_drag',)},
-            {'frame': ('贝果-局内', '武备箱待入箱-实机')},
-        ]
-    )
-    op = WatchedStore(test_context)
-    enter_running_state(test_context)
-    try:
-        result = op.execute()
-        assert not result.success
-        assert '无变化' in result.status
-        assert len(controller.recorded_drags) == 4
-        assert all(
-            drag == controller.recorded_drags[0] for drag in controller.recorded_drags
-        )
-    finally:
-        reset_running_state(test_context, op)
-
-
-@pytest.mark.parametrize('missed_drags', [1, 3])
+@pytest.mark.parametrize(
+    'missed_drags',
+    [
+        3,
+    ],
+)
 def test_store_second_drag_can_land(
     test_context: TestContext,
     controller: BagelDragController,

@@ -41,7 +41,12 @@ class TimedStep(BagelOperation):
         return self.round_wait('新步骤仍在等待', wait=1)
 
 
-@pytest.mark.parametrize('operation_timeout', [False, True])
+@pytest.mark.parametrize(
+    'operation_timeout',
+    [
+        True,
+    ],
+)
 def test_real_framework_timeout_reaches_formal_cleanup(
     test_context: TestContext,
     app_setup: tuple[BagelConfig, BagelRunRecord, list[str]],

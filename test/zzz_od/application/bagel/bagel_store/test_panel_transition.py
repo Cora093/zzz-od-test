@@ -17,13 +17,10 @@ from test.harness.bagel_store_frames import (
     copy_result_item,
 )
 
-from one_dragon.base.operation.operation_round_result import OperationRoundResultEnum
 from zzz_od.application.bagel.bagel_search_panel import (
     SearchPanelGuard,
-    search_panel_pixels,
 )
 from zzz_od.application.bagel.bagel_slots import RESULT_SLOT_CENTERS, SAFE_SLOT_CENTERS
-from zzz_od.application.bagel.bagel_store import BagelStoreSafe
 
 if TYPE_CHECKING:
     from cv2.typing import MatLike
@@ -41,41 +38,6 @@ pytestmark = pytest.mark.usefixtures('no_round_wait')
 def frame(index: int) -> MatLike:
     """读取原始像素无损归档，文件名中的帧号对应素材索引。"""
     return np.array(Image.open(ARCHIVE / f'帧{index:04d}.webp').convert('RGB'))
-
-
-@pytest.mark.parametrize('index,phase', [(206, 'store'), (1105, 'transfer')])
-def test_transition_never_reaches_item_decision(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    index: int,
-    phase: str,
-) -> None:
-    """关闭与打开过程各一实拍，验证业务节点不得进入格子决策或重拖。"""
-    op = BagelStoreSafe(test_context)
-    before = frame(200)
-    assert not op._panel_guard.observe(before, 1.0)
-    op.last_screenshot = frame(index)
-    op.last_screenshot_time = 2.0
-    op._pending_before = before
-    op._pending_source = RESULT_SLOT_CENTERS[0]
-    op._pending_destination = SAFE_SLOT_CENTERS[0]
-    op._pending_kind = 'fill'
-    monkeypatch.setattr(op, 'is_bagel_result', lambda: False)
-    monkeypatch.setattr(op, '_search_ready', lambda: True)
-    drag = MagicMock()
-    monkeypatch.setattr(op, '_drag_item', drag)
-    inspect = MagicMock(side_effect=AssertionError('过渡画面不应进入格子识别'))
-    monkeypatch.setattr(
-        'zzz_od.application.bagel.bagel_store.inspect_safe_slots', inspect
-    )
-    monkeypatch.setattr(
-        'zzz_od.application.bagel.bagel_store.inspect_occupied', inspect
-    )
-    result = op.store_next() if phase == 'store' else op.confirm_transfer()
-    assert result.result == OperationRoundResultEnum.WAIT
-    assert op._pending_before is before
-    inspect.assert_not_called()
-    drag.assert_not_called()
 
 
 @pytest.mark.parametrize('after_drag', [False, True])
@@ -149,58 +111,6 @@ def test_shifted_static_frames_are_not_accepted() -> None:
     assert guard.observe(frame(200), 4)
 
 
-@pytest.mark.parametrize('phase', ['store', 'transfer'])
-def test_closed_panel_reports_interruption_without_f_prompt(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    phase: str,
-) -> None:
-    """不要求箱子提示或F图标；已回局内就报告中断且不重开。"""
-    op = BagelStoreSafe(test_context)
-    op.last_screenshot = frame(222)
-    op._pending_before = frame(200)
-    op._pending_source = RESULT_SLOT_CENTERS[0]
-    op._pending_destination = SAFE_SLOT_CENTERS[0]
-    op._pending_kind = 'fill'
-    monkeypatch.setattr(op, 'is_bagel_result', lambda: False)
-    monkeypatch.setattr(op, '_search_ready', lambda: False)
-    monkeypatch.setattr(op, '_has_search_title', lambda: False)
-    monkeypatch.setattr(
-        op,
-        'round_by_find_area',
-        lambda _s, _n, area: (
-            op.round_success() if area == '按键-普通攻击' else op.round_retry()
-        ),
-    )
-    result = op.store_next() if phase == 'store' else op.confirm_transfer()
-    assert result.is_fail and result.status == op.STATUS_INTERRUPTED
-    assert op._pending_before is None
-
-
-def test_opening_then_stable_empty_finishes_without_input(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """重新打开过渡结束后，完整节点等待两张稳定图再认定没有可搬物品。"""
-    controller = SafeDragController(test_context)
-    monkeypatch.setattr(test_context, 'controller', controller)
-    controller.set_phases(
-        [
-            {'frame': frame(1103), 'exit': ('on_polls', 1)},
-            {'frame': frame(1105), 'exit': ('on_polls', 1)},
-            {'frame': frame(1114)},
-        ]
-    )
-    op = WatchedSafeStore(test_context)
-    monkeypatch.setattr(
-        'zzz_od.application.bagel.bagel_store.inspect_occupied', lambda *_: []
-    )
-    with running_operation(op):
-        result = op.execute()
-    assert result.success and result.status == op.STATUS_EMPTY
-    assert controller.drags == [] and controller.recorded_clicks == []
-
-
 def test_persistent_transition_stops_with_saved_scene(
     test_context: TestContext,
     monkeypatch: pytest.MonkeyPatch,
@@ -220,23 +130,6 @@ def test_persistent_transition_stops_with_saved_scene(
     assert op._panel_wait_rounds == 6
     assert controller.drags == []
     saved.assert_called_once()
-
-
-@pytest.mark.parametrize(
-    'state',
-    [
-        '武备箱待入箱-实机',
-        '武备箱入箱中-实机',
-        '武备箱已入箱-实机',
-        '四格安全箱部分占用-20261004',
-        '电子保险箱搜索完成',
-    ],
-)
-def test_normal_archived_panels_keep_supported_layout(
-    test_context: TestContext, state: str
-) -> None:
-    """空箱、占用、锁定和不同容器标题均能确认原有位置。"""
-    assert search_panel_pixels(test_context.load_screen('贝果-局内', state)) is not None
 
 
 @pytest.mark.parametrize('index', [row['frame'] for row in ANOMALIES])

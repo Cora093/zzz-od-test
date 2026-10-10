@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from zzz_od.application.bagel.bagel_deposit import BagelDeposit
 from zzz_od.application.bagel.bagel_settle import BagelSettleWarehouse
 
 if TYPE_CHECKING:
@@ -16,7 +15,7 @@ from zzz_od.application.bagel.bagel_slots import WAREHOUSE_SAFE_CENTERS
 
 
 @pytest.mark.parametrize(
-    'case, expected',
+    'case,expected',
     [
         ('screen_missing', '等待结算后仓库画面'),
         ('safe_occupied', '结算后安全箱仍有物资'),
@@ -45,33 +44,6 @@ def test_final_capacity_rejects_unverified_state(
     assert not result.is_success
     assert expected in result.status
     assert result.is_fail == (case == 'safe_occupied')
-
-
-@pytest.mark.parametrize('auto_clean', [False, True])
-@pytest.mark.parametrize('starting', [False, True])
-@pytest.mark.parametrize(
-    'deposit_status', [BagelDeposit.STATUS_EMPTY, BagelDeposit.STATUS_DONE]
-)
-def test_full_capacity_accepts_confirmed_empty_safe(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    auto_clean: bool,
-    starting: bool,
-    deposit_status: str,
-) -> None:
-    """原本空箱及非空入仓清箱都允许满仓结算，清理开关和启动恢复不改变规则。"""
-    op = BagelSettleWarehouse(test_context, auto_clean, starting=starting)
-    op.deposit_status = deposit_status
-    test_context.mock_screen('贝果-仓库', '空局仓库-原生1080')
-    op.screenshot()
-    monkeypatch.setattr(
-        'zzz_od.application.bagel.bagel_screen.parse_capacity_pair',
-        lambda _: (280, 280),
-    )
-    result = op.verify_warehouse_capacity()
-    assert result.is_success, result.status
-    assert result.status == deposit_status
-    assert result.data == {'sale_completed': False}
 
 
 @pytest.mark.parametrize('unknown', [False, True])

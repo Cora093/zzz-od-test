@@ -15,39 +15,12 @@ from zzz_od.application.bagel.bagel_slots import WAREHOUSE_SAFE_CENTERS
 
 
 @pytest.mark.parametrize(
-    'safe_after,warehouse_after,success',
-    [
-        ((0,), 279, True),
-        ((), 280, True),
-        ((0,), 280, False),
-        ((1,), 279, False),
-        (None, 279, False),
-        ((), 281, False),
-    ],
-)
-def test_sale_recovery_requires_observed_progress(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    safe_after: tuple[int, ...] | None,
-    warehouse_after: int,
-    success: bool,
-) -> None:
-    """允许残留出售时仍须看到腾位或安全箱减少，未知、新增占用不放行。"""
-    op = BagelCleanWarehouse(test_context, allow_safe_items=True)
-    op._safe_before = (0,)
-    op._warehouse_before = 280
-    monkeypatch.setattr(op, '_warehouse_idle', lambda: True)
-    monkeypatch.setattr(op, '_warehouse_count', lambda: warehouse_after)
-    monkeypatch.setattr(
-        'zzz_od.application.bagel.bagel_clean.safe_occupied_indices',
-        lambda _: safe_after,
-    )
-    assert op.wait_idle_after_sell().is_success == success
-
-
-@pytest.mark.parametrize(
     'allow,occupied,success',
-    [(False, (0,), False), (True, (0,), True), (True, None, False)],
+    [
+        (False, (0,), False),
+        (True, (0,), True),
+        (True, None, False),
+    ],
 )
 def test_only_authorized_known_safe_items_can_enter_sale(
     test_context: TestContext,
@@ -72,8 +45,13 @@ def test_only_authorized_known_safe_items_can_enter_sale(
     assert op.open_sell().is_success == success
 
 
-@pytest.mark.parametrize('capacity', [2, 3, 4, 5])
-@pytest.mark.parametrize('unknown', [False, True])
+@pytest.mark.parametrize(
+    'unknown,capacity',
+    [
+        (False, 2),
+        (True, 5),
+    ],
+)
 def test_sale_requires_known_empty_unlocked_slots(
     test_context: TestContext,
     capacity: int,

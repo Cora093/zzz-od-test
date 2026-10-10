@@ -26,44 +26,21 @@ class WatchedSettle(WatchdogOperationMixin, BagelSettleWarehouse):
     watchdog_max_rounds: int = 20
 
 
-@pytest.mark.parametrize('starting,post_sale_full', [(False, True), (True, False)])
 @pytest.mark.parametrize(
-    'first,second,auto_clean,due,full,expected_events,success',
+    'first,second,auto_clean,due,full,expected_events,success,starting,post_sale_full',
     [
-        (BagelDeposit.STATUS_DONE, None, True, False, False, ['deposit'], True),
-        (BagelDeposit.STATUS_DONE, None, True, True, False, ['deposit', 'sale'], True),
-        (BagelDeposit.STATUS_DONE, None, True, False, True, ['deposit', 'sale'], True),
-        (BagelDeposit.STATUS_EMPTY, None, True, True, False, ['deposit'], True),
-        (BagelDeposit.STATUS_EMPTY, None, True, True, True, ['deposit'], True),
-        (BagelDeposit.STATUS_DONE, None, False, False, True, ['deposit'], True),
-        (BagelDeposit.STATUS_FULL, None, False, True, True, ['deposit'], False),
-        (
-            BagelDeposit.STATUS_FULL,
-            BagelDeposit.STATUS_DONE,
-            True,
-            False,
-            True,
-            ['deposit', 'sale', 'retry'],
-            True,
-        ),
-        (
-            BagelDeposit.STATUS_FULL,
-            BagelDeposit.STATUS_EMPTY,
-            True,
-            False,
-            True,
-            ['deposit', 'sale', 'retry'],
-            True,
-        ),
-        (
-            BagelDeposit.STATUS_FULL,
-            BagelDeposit.STATUS_FULL,
-            True,
-            True,
-            True,
-            ['deposit', 'sale', 'retry'],
-            False,
-        ),
+        (BagelDeposit.STATUS_DONE, None, True, False, False, ['deposit'], True, False, True),
+        (BagelDeposit.STATUS_DONE, None, True, True, False, ['deposit', 'sale'], True, False, True),
+        (BagelDeposit.STATUS_DONE, None, True, False, True, ['deposit', 'sale'], True, False, True),
+        (BagelDeposit.STATUS_EMPTY, None, True, True, False, ['deposit'], True, False, True),
+        (BagelDeposit.STATUS_EMPTY, None, True, True, True, ['deposit'], True, False, True),
+        (BagelDeposit.STATUS_DONE, None, False, False, True, ['deposit'], True, False, True),
+        (BagelDeposit.STATUS_FULL, None, False, True, True, ['deposit'], False, False, True),
+        (BagelDeposit.STATUS_FULL, BagelDeposit.STATUS_DONE, True, False, True, ['deposit', 'sale', 'retry'], True, False, True),
+        (BagelDeposit.STATUS_FULL, BagelDeposit.STATUS_DONE, True, False, True, ['deposit', 'sale', 'retry'], True, True, False),
+        (BagelDeposit.STATUS_FULL, BagelDeposit.STATUS_EMPTY, True, False, True, ['deposit', 'sale', 'retry'], True, False, True),
+        (BagelDeposit.STATUS_FULL, BagelDeposit.STATUS_FULL, True, True, True, ['deposit', 'sale', 'retry'], False, False, True),
+        (BagelDeposit.STATUS_FULL, BagelDeposit.STATUS_FULL, True, True, True, ['deposit', 'sale', 'retry'], False, True, False),
     ],
 )
 def test_settlement_limits_sale_and_deposit_retry(

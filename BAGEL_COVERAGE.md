@@ -1,115 +1,46 @@
-# 贝果测试整理记录
+# 贝果关键行为覆盖
 
-按行为覆盖精简。真实故障图片保留，未删除素材。六个已知失败先修复并通过后才整理。
+本轮以测试仓提交 `c14c29c` 的1177项为基线，完整回归保留400项（含6项通用返回），上限为400项。贝果测试函数从459个减少到196个，文件从70个减少到62个。删除发生在测试源码中；没有用跳过收集、循环隐藏参数或移动到其他测试集来降低数量。
 
-| 原测试或组合 | 覆盖去向与理由 |
-|---|---|
-| `test_warehouse_clean.py::test_settle_rechecks_full_capacity_after_successful_deposit` | 由结算 test_sale_retry 的完整操作图覆盖出售开关、满仓、空箱与唯一重试。 |
-| `test_warehouse_clean.py::test_settle_full_limits_sale_retry` | 由结算 test_sale_retry 的完整操作图覆盖出售开关、满仓、空箱与唯一重试。 |
-| `test_flows.py::test_open_box_stops_after_three_missed_interactions` | 由 bagel_run_flow/test_container_recovery 的真实输入序列覆盖补按、已开面板和三次交互上限；保留实机失败帧用例。 |
-| `test_flows.py::test_open_box_retries_after_search_panel_closes` | 由 bagel_run_flow/test_container_recovery 的真实输入序列覆盖补按、已开面板和三次交互上限；保留实机失败帧用例。 |
-| `test_flows.py::test_open_box_does_not_press_while_search_panel_open` | 由 bagel_run_flow/test_container_recovery 的真实输入序列覆盖补按、已开面板和三次交互上限；保留实机失败帧用例。 |
-| `test_flows.py::test_open_box_retries_missed_interaction_once` | 由 bagel_run_flow/test_container_recovery 的真实输入序列覆盖补按、已开面板和三次交互上限；保留实机失败帧用例。 |
-| `bagel_enter/test_confirm_entry.py::test_initial_zero_does_not_click_min` | 由 test_investment_flow 的真实金额、MIN、延迟归零及进入完整流程覆盖；异常读数与点击失败单测保留。 |
-| `bagel_enter/test_confirm_entry.py::test_nonzero_investment_waits_for_new_zero_frame` | 由 test_investment_flow 的真实金额、MIN、延迟归零及进入完整流程覆盖；异常读数与点击失败单测保留。 |
-| `bagel_enter/test_confirm_entry.py::test_live_500k_frame_clicks_min_only` | 由 test_investment_flow 的真实金额、MIN、延迟归零及进入完整流程覆盖；异常读数与点击失败单测保留。 |
-| `bagel_route_vision/test_locate.py::test_live_other_spawns_rejected` | 同一底图和截图由 bagel_fixed_map/test_locate 历史真值清单统一验证；保留上层位置冲突及出生分类测试。 |
-| `bagel_route_vision/test_locate.py::test_archived_route_positions` | 同一底图和截图由 bagel_fixed_map/test_locate 历史真值清单统一验证；保留上层位置冲突及出生分类测试。 |
-| `bagel_route_vision/test_locate.py::test_missing_map_rejected` | 同一底图和截图由 bagel_fixed_map/test_locate 历史真值清单统一验证；保留上层位置冲突及出生分类测试。 |
-| `bagel_route_vision/test_locate.py::test_other_spawns_rejected` | 同一底图和截图由 bagel_fixed_map/test_locate 历史真值清单统一验证；保留上层位置冲突及出生分类测试。 |
-| `bagel_route_vision/test_locate.py::test_second_reference_box_cross_round` | 同一底图和截图由 bagel_fixed_map/test_locate 历史真值清单统一验证；保留上层位置冲突及出生分类测试。 |
-| `bagel_route_vision/test_locate.py::test_spawn_cross_round` | 同一底图和截图由 bagel_fixed_map/test_locate 历史真值清单统一验证；保留上层位置冲突及出生分类测试。 |
-| `bagel_minimap/test_register_minimap.py::test_other_spawns_rejected` | 非目标出生截图由固定底图历史真值清单覆盖；底层独立变换、锚点、几何边界仍保留。 |
-| `bagel_clear_loadout/test_unload_next.py::test_confirmed_unload_selects_next_from_same_observation` | 完整清空流程覆盖逐格选择及搬运计数；不再单独锁定省略等待轮数的实现细节。 |
-| `bagel_slots/test_inspect_safe_slots.py::test_warehouse_entry_crops_warehouse_positions` | 仓库/局内的真实容量识别与完整入仓回归覆盖坐标，取消对内部裁图调用参数的重复断言。 |
-| `bagel_item_vision/test_choose.py::test_full_safe_leaves_lower_priority_results` | test_storage.py 的真实拖拽、材料故障图、金币和满箱流程覆盖选择结果；保留完整品质顺序和同品质类型顺序的纯逻辑测试。 |
-| `bagel_item_vision/test_choose.py::test_currency_is_never_selected` | test_storage.py 的真实拖拽、材料故障图、金币和满箱流程覆盖选择结果；保留完整品质顺序和同品质类型顺序的纯逻辑测试。 |
-| `bagel_item_vision/test_choose.py::test_swap_when_result_strictly_better_than_worst_safe` | test_storage.py 的真实拖拽、材料故障图、金币和满箱流程覆盖选择结果；保留完整品质顺序和同品质类型顺序的纯逻辑测试。 |
-| `bagel_item_vision/test_choose.py::test_fill_empty_safe_with_best_result` | test_storage.py 的真实拖拽、材料故障图、金币和满箱流程覆盖选择结果；保留完整品质顺序和同品质类型顺序的纯逻辑测试。 |
-| `bagel_item_vision/test_choose.py::test_material_is_lower_than_non_material_regardless_of_quality` | test_storage.py 的真实拖拽、材料故障图、金币和满箱流程覆盖选择结果；保留完整品质顺序和同品质类型顺序的纯逻辑测试。 |
-| `test_warehouse_clean.py::test_filter_dialog_areas_and_zero_count` | 真实完整出售与零件数取消流程覆盖同样区域识别，不重复逐个调用识别 helper。 |
-| `test_warehouse_clean.py::test_idle_and_sell_mode_areas` | 真实完整出售与零件数取消流程覆盖同样区域识别，不重复逐个调用识别 helper。 |
-| `bagel_return/test_execute.py` 参数组合 | 两组代表短加载和长加载加对话黑屏，保留全部六个失败修复后再缩减组合。 |
-| `bagel_return/test_execute.py` 参数组合 | 两种渐显画面和两个入口各出现一次，完整阻挡流程仍覆盖两个入口。 |
-| `bagel_clear_loadout/test_clear_and_unload.py` 参数组合 | 完整清空已覆盖十件全卸；只保留另一背包容量下的道具卸装流程。 |
-| `bagel_settle/test_sale_retry.py` 参数组合 | 结算十条业务分支各覆盖启动/局末两入口；满仓最终守卫另有直接测试，去掉无关四重展开。 |
-| `bagel_store/test_transfer_guards.py` 参数组合 | 容量2至5的锁格识别由 inspect_safe_slots 全保留；完整输入流程保留最小容量、四格换物和五格无锁。 |
-| `bagel_deposit/test_execute_capacity_deposit.py` 参数组合 | 中间容量由识别测试覆盖，完整入仓保留锁格和无锁两端。 |
-| `bagel_store_carried/test_bulk_transfer.py` 参数组合 | 锁格中间容量由识别测试覆盖，转存的未知/空箱分支保留。 |
-| `bagel_navigate/test_navigation.py` 参数组合 | 停稳后的四种结果全保留，两种移动模式与容器分别覆盖；容器恢复完整流程仍覆盖box/safe。 |
-| `bagel_store/test_panel_transition.py` 参数组合 | 28张异常改由独立守卫逐图验证，收集/回读各一集成场景，取消56次重复业务搭建。 |
-| `bagel_enter/test_clear_starting_loadout.py` 全部用例 | 启动清空完整流程与再次执行选图核验覆盖首次清空后的重新核验，应用重试测试覆盖不再清空。 |
-| `bagel_enter/test_handle_starting_warehouse.py` 全部用例 | test_starting_warehouse_flow 从真实仓库开始执行完整转存、返回与入场。 |
-| `bagel_enter/test_leave_starting_warehouse.py` 全部用例 | test_starting_warehouse_flow 保留返回无效、超时与点击失败。 |
-| `bagel_enter/test_verify_zero_loadout.py` 全部用例 | 清空完整流程及 test_reject_unsafe_entry 保留非零拒绝，应用重试验证首次资格。 |
-| `bagel_enter/test_handle_init.py` 全部用例 | test_speedup_flow 的复用操作场景与投资完整流程验证重新执行，不单独检查内部字段重置。 |
-| `bagel_app/test_handle_init.py` 全部用例 | 正式 execute 重试预算与出售跨局计数测试验证本次任务状态。 |
-| `bagel_app/test_settle_after_defeat.py` 全部用例 | 正式 execute 的失败收尾及应用配置测试验证实际结算参数，不单独重复委托调用。 |
-| `bagel_store/test_transfer_status_gap.py` 全部用例 | test_unknown_retry 完整流程保留回读基线、状态恢复和持续未知停止。 |
+六个历史失败已在上一轮修复并验证。本轮从通过的用例中精简。图片和历史真值不改，生产代码不改。
 
-## 文件合并
+## 分布与删减
 
-同一模块的简单方法测试合并为行为文件；测试函数与参数保持原样，不以合并文件冒充删除覆盖。
+以下按主要职责归组。面板异常图片归在收集模块，历史定位图片归在识别模块，不重复计数。
 
-- `zzz-od-test/test/zzz_od/application/bagel/test_defeat.py` → `zzz-od-test/test/zzz_od/application/bagel/test_behavior.py`
-- `zzz-od-test/test/zzz_od/application/bagel/test_deposit_flows.py` → `zzz-od-test/test/zzz_od/application/bagel/test_behavior.py`
-- `zzz-od-test/test/zzz_od/application/bagel/test_map_projection.py` → `zzz-od-test/test/zzz_od/application/bagel/test_behavior.py`
-- `zzz-od-test/test/zzz_od/application/bagel/test_rounds_flows.py` → `zzz-od-test/test/zzz_od/application/bagel/test_behavior.py`
-- `zzz-od-test/test/zzz_od/application/bagel/test_spawn_hud_gap.py` → `zzz-od-test/test/zzz_od/application/bagel/test_behavior.py`
-- `zzz-od-test/test/zzz_od/application/bagel/test_storage_flows.py` → `zzz-od-test/test/zzz_od/application/bagel/test_behavior.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_check_ready.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_round_state.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_enter.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_round_state.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_enter_safe_capacity.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_round_state.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_return_after_success.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_round_state.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_sell_interval.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_app/test_round_state.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_clean/test_allow_safe_items.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_clean/test_sale_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_clean/test_safe_clear_capacity.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_clean/test_sale_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_clear_loadout/test_execute_clear_loadout.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_clear_loadout/test_clear_and_unload.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_clear_loadout/test_unload_next.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_clear_loadout/test_clear_and_unload.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_close_opening_map.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_entry_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_confirm_entry.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_entry_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_open_hub_from_other_screens.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_entry_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_reject_unsafe_entry.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_enter/test_entry_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_item_vision/test_badge_crops.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_item_vision/test_quality_and_badges.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_item_vision/test_identify_quality.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_item_vision/test_quality_and_badges.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_route_vision/test_is_at_spawn.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_route_vision/test_spawn_and_heading.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_route_vision/test_locate.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_route_vision/test_spawn_and_heading.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_route_vision/test_player_angle.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_route_vision/test_spawn_and_heading.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_complete_loadout.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_ocr_and_parsing.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_entry_warning.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_ocr_and_parsing.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_investment_coin.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_ocr_and_parsing.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_native_ocr.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_ocr_and_parsing.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_parse.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_ocr_and_parsing.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_read_loadout.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_ocr_and_parsing.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_zero_loadout.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_screen/test_ocr_and_parsing.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_settle/test_final_capacity_guard.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_settle/test_final_state.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_settle/test_final_safe_capacity.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_settle/test_final_state.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_slots/test_inspect_safe_slots.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_slots/test_slot_evidence.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_slots/test_slot_texture_guard.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_slots/test_slot_evidence.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_confirm_transfer_safe_state.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_transfer_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_drag_retry.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_transfer_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_execute_capacity.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_transfer_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_store_next_capacity.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store/test_transfer_guards.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_backpack_centers.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_bulk_transfer.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_execute_store_carried.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_bulk_transfer.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_store_next.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_bulk_transfer.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_store_next_capacity_carried.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_store_carried/test_bulk_transfer.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_transfer/test_carried_slot_state.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_transfer/test_double_click_and_slots.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_transfer/test_double_click_item.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_transfer/test_double_click_and_slots.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_usage/test_log_screenshot.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_usage/test_messages.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_usage/test_log_start.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_usage/test_messages.py`
-- `zzz-od-test/test/zzz_od/application/bagel/bagel_usage/test_stop_guidance.py` → `zzz-od-test/test/zzz_od/application/bagel/bagel_usage/test_messages.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_add_step.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_checked_changed.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_drag_point.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_draw.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_edit_action.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_edit_point.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_edit_step.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_export_flow.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_move_step.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_refresh_stop_shortcut.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_start_trial.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
-- `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_update_disclosures.py` → `zzz-od-test/test/zzz_od/gui/view/bagel/bagel_route_editor/test_editor_actions.py`
+| 范围 | 前 | 后 | 删除或缩减 | 保留的验证 |
+| --- | ---: | ---: | --- | --- |
+| 入场与清空 | 112 | 33 | 节点委托、相同读数在多个重试序号上的交叉、故障测试的选图前置 | 三条完整入场、投资失败、冲突读数禁止进入、暂停撤销资格、启动恢复、完整清空及未知停止 |
+| 导航与局内执行 | 321 | 71 | 动作×地图×容器全面交叉、直接字段重置、与真实流程重复的薄节点 | A/B路线、真实拐角、停稳与新截图、失位停止、解锁、恢复次数与时间上限、失败不推进、输入释放 |
+| 收集转存与结算 | 248 | 108 | 容量与入口交叉、重复格子helper、出售结果的多层重复断言 | 28张面板异常、搜查中拾取、满箱优先级、拖拽核验、未知等待、转存和堆叠、空箱禁止出售及唯一重试 |
+| 识别地图与素材 | 265 | 108 | 同一图片多入口复测、合成旋转与几何枚举、部分OCR拼写及元数据细分 | 37项历史定位、7档实际金额、金币误读、真实角标和物品、锁格容量、缩放及遮挡、建图成功与拒绝发布 |
+| 整局恢复与返回 | 86 | 29 | 应用节点委托、相同返回结果的多组加载组合、重复计数单测 | 正式重试预算、失败结算后再入场、清理失败停止、超时、成功和跳过不重置预算、页面阻挡 |
+| 配置、记录、GUI和生命周期 | 139 | 45 | 文案、布局、旧格式异常细分、编辑器显示细节、重复默认值 | YAML数值边界、非法类型代表、出售范围、配置绑定、原子写失败、记录保留、编辑撤销和发布隔离、运行锁定、事件解绑 |
+| 通用返回 | 6 | 6 | 无 | 全部原有标题识别 |
+| 合计 | 1177 | 400 | 减少777项（66.0%） | 参数化边界仍逐项报告 |
 
-根目录综合测试最终拆为 `test_storage.py`、`test_deposit.py`、`test_rounds.py` 与 `test_spawn_and_defeat.py`，分别维护入箱、入仓、整局和出生/失败行为。
+## 主要覆盖落点
+
+路径均相对于 `test/zzz_od/application/bagel/`；GUI在 `test/zzz_od/gui/view/bagel/`。
+
+- 入场：`bagel_enter/test_investment_flow.py` 保留初始零投资、实际500K归零、延迟更新三条完整链路。五种投资故障直接从真实确认节点执行，固定“已经核验零携带”前提；真实OCR、重试、禁止入场和失败留图仍执行。
+- 清空：`bagel_clear_loadout/test_clear_and_unload.py` 保留完整十件卸装、仓库空位不足、读数未知、去向异常与暂停后的禁止重发。取消每格相同重试剧本及部分动画排列。
+- 容器恢复：`bagel_run_flow/test_container_recovery.py` 用两种容器的代表组合核对三次交互、两次重新靠近、总时间和暂停规则；保留发送输入后报错仍消耗预算的场景。
+- 收集：`test_storage.py` 保留材料故障图、金币、品质优先级、满箱替换和拖后核验。`bagel_store/` 保留真实面板异常与持续未知停止。
+- 转存与结算：`bagel_store_carried/test_bulk_transfer.py` 保留完整转存、堆叠、暂停、未知格、错误计数和出售中止；`bagel_settle/test_sale_retry.py` 从20项减至12项，十种业务结果均保留，启动与局末只在关键重试分支同时出现。
+- 定位：`bagel_fixed_map/test_locate.py` 的37项历史真值不删；真实导航故障仍在 `bagel_navigate/test_navigation.py` 运行。取消同图在底层配准和出生helper上的重复验证。
+- 整局：`bagel_app/test_execute_retry.py` 与 `test_execute_screens.py` 保留正式执行、清理和再入场；`test_rounds.py` 保留累计预算和清理失败停止。
+- GUI：`bagel_route_editor/test_editor_actions.py` 保留编辑撤销、导出仅改所选资源、重排失败与撤销、运行中锁定；`bagel_flow_trial/test_trial_run.py` 保留取消与释放鼠标。
+- 生命周期：`bagel_operation/test_run_events.py` 保留应用和操作两类的成功、失败、初始化异常和收尾异常；同时验证排队回调隔离及等待执行中的回调结束。
+
+## 不再逐项验证的范围
+
+- 不再证明每个节点、每个动作、每种容量和每个入口的所有组合。不同分支仍有代表，但同类组合的单独回归定位能力下降。
+- 旧流程版本迁移、旧记录异常的所有变体、各配置setter的全部类型、独立插件发现，不再有贝果专项的逐项保护。
+- 不再逐项核对文案、像素布局、编辑器披露项及所有创建方式；保留关键编辑与发布结果。
+- 部分合成角度、几何、色相边界和OCR文本排列不再穷举。真实故障样本保留不代表覆盖全部识别变化。
+- 投资故障短流程不证明其前置接线。前置由三条完整入场验证，暂停资格由单独流程验证。
+
+源码删除记录由Git差异保留，不在本文复制逐函数历史名单。每次新增测试先确认新增的是业务结果、真实故障还是已有结果的重复组合；独特风险不能为了数量上限静默删除。
+
+运行入口和验证结果见主仓[贝果测试入口](../docs/develop/testing/bagel.md)与[验证记录](../docs/develop/testing/bagel_results.md)。

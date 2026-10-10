@@ -8,7 +8,6 @@ import pytest
 from test.harness.bagel_entry import BagelFixtureController
 from test.harness.fixture_controller import enter_running_state, reset_running_state
 
-from one_dragon.base.operation.operation_round_result import OperationRoundResultEnum
 from zzz_od.application.bagel.bagel_exit import BagelExit
 
 if TYPE_CHECKING:
@@ -28,76 +27,12 @@ def controller(
 
 
 @pytest.mark.parametrize(
-    'page,state,kind,status,keys',
-    [
-        ('贝果-仓库', '空局仓库-原生1080', 'SUCCESS', '已到结算仓库', []),
-        ('贝果-退出确认', '主动退出-原生1080', 'SUCCESS', '已到退出确认', []),
-        ('贝果-局内', '暂停菜单-原生1080', 'SUCCESS', '已到暂停菜单', []),
-        ('贝果-结算', '高危空局失败-原生1080', 'SUCCESS', '已到贝果结算', []),
-        (
-            '贝果-局内',
-            '武备箱搜查中-r07',
-            'WAIT',
-            '关闭局内面板后重新检查退出画面',
-            ['esc'],
-        ),
-        (
-            '贝果-局内',
-            '电子保险箱搜索完成',
-            'WAIT',
-            '关闭局内面板后重新检查退出画面',
-            ['esc'],
-        ),
-        (
-            '贝果-局内',
-            '电子保险箱第1轮小圈',
-            'WAIT',
-            '关闭局内面板后重新检查退出画面',
-            ['esc'],
-        ),
-        ('贝果-局内', '高危A出生-原生1080', 'SUCCESS', None, ['esc']),
-        ('贝果-局内', '加载-原生1080', 'RETRY', '未识别贝果局内画面', []),
-    ],
-    ids=[
-        'warehouse',
-        'confirm',
-        'menu',
-        'defeat',
-        'box',
-        'safe',
-        'unlock',
-        'hud',
-        'unknown',
-    ],
-)
-def test_open_menu_routes_and_inputs(
-    test_context: TestContext,
-    controller: BagelFixtureController,
-    page: str,
-    state: str,
-    kind: str,
-    status: str | None,
-    keys: list[str],
-) -> None:
-    """不同入口只返回相应状态；面板只按 Esc，未知画面不发送输入。"""
-    controller.set_phases([{'frame': (page, state)}])
-    op = BagelExit(test_context)
-    op.screenshot()
-    result = op.open_menu()
-    assert result.result == OperationRoundResultEnum[kind]
-    assert result.status == status
-    assert controller.recorded_inputs == keys
-    assert controller.recorded_clicks == []
-
-
-@pytest.mark.parametrize(
     'panel',
     [
         '武备箱搜查中-r07',
-        '电子保险箱搜索完成',
         '电子保险箱第1轮小圈',
     ],
-    ids=['box', 'safe', 'unlock'],
+    ids=['box', 'unlock'],
 )
 def test_panel_close_rechecks_world_before_exit(
     test_context: TestContext,

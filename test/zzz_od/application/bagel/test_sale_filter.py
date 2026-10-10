@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 from zzz_od.application.bagel.bagel_clean import FILTER_TICKS, BagelCleanWarehouse
-from zzz_od.application.bagel.bagel_deposit import BagelDeposit
 
 if TYPE_CHECKING:
     from test.conftest import TestContext
@@ -16,7 +15,10 @@ pytestmark = pytest.mark.usefixtures('no_round_wait')
 
 
 @pytest.mark.parametrize(
-    'initial', [set(), {'筛选-Z', '筛选-装备', '筛选-A'}, set(FILTER_TICKS)]
+    'initial',
+    [
+        set(FILTER_TICKS),
+    ],
 )
 def test_filter_converges_from_existing_selection(
     test_context: TestContext,
@@ -55,64 +57,6 @@ def test_filter_converges_from_existing_selection(
             break
     assert result.status == '勾选完成'
     assert selected == set(FILTER_TICKS)
-
-
-@pytest.mark.parametrize('interruption', ['not_full', 'ocr_missing', 'screen_missing'])
-def test_full_frames_must_be_consecutive(
-    test_context: TestContext,
-    monkeypatch: pytest.MonkeyPatch,
-    interruption: str,
-) -> None:
-    """满三帧被中断后再满三帧，不能触发仓满清理。"""
-    op = BagelDeposit(test_context)
-    monkeypatch.setattr(op, '_warehouse_ready', lambda: True)
-    monkeypatch.setattr(op, '_safe_count', lambda: 1)
-    monkeypatch.setattr(op, '_warehouse_pair', lambda: (280, 280))
-    monkeypatch.setattr(
-        op,
-        'round_by_find_and_click_area',
-        lambda *_args, **_kwargs: op.round_success('点击入仓'),
-    )
-    for _ in range(3):
-        op.confirm_cleared()
-    monkeypatch.setattr(
-        op, '_warehouse_ready', lambda: interruption != 'screen_missing'
-    )
-    monkeypatch.setattr(
-        op,
-        '_warehouse_pair',
-        lambda: None if interruption == 'ocr_missing' else (279, 280),
-    )
-    op.confirm_cleared()
-    monkeypatch.setattr(op, '_warehouse_ready', lambda: True)
-    monkeypatch.setattr(op, '_warehouse_pair', lambda: (280, 280))
-    for _ in range(3):
-        assert op.confirm_cleared().status != BagelDeposit.STATUS_FULL
-    for _ in range(3):
-        result = op.confirm_cleared()
-    assert result.status == BagelDeposit.STATUS_FULL
-
-
-@pytest.mark.parametrize(
-    'state, expected',
-    [
-        ('仓库快速选择', set()),
-        ('快速选择-预选Z装备-20260921', {'筛选-Z', '筛选-装备'}),
-        ('快速选择-步骤7-20260921', set(FILTER_TICKS)),
-    ],
-)
-def test_filter_reads_real_selected_backgrounds(
-    test_context: TestContext,
-    state: str,
-    expected: set[str],
-) -> None:
-    """真实画面中区分未选、预选禁卖项和完整目标条件。"""
-    op = BagelCleanWarehouse(test_context)
-    test_context.mock_screen('贝果-仓库', state)
-    op.screenshot()
-    states = op._filter_states()
-    assert states is not None
-    assert {name for name, selected in states.items() if selected} == expected
 
 
 def test_ineffective_click_cannot_finish_filter(

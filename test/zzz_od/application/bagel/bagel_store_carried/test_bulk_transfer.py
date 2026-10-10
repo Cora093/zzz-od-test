@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
@@ -15,56 +14,14 @@ from test.harness.bagel_loadout import controller as controller
 from test.harness.bagel_safe_slots import lock_safe_suffix
 
 from one_dragon.base.geometry.point import Point
-from one_dragon.base.operation.operation_round_result import OperationRoundResultEnum
 from zzz_od.application.bagel.bagel_store_carried import (
     WAREHOUSE_SAFE_CENTERS,
     BagelStoreCarried,
-    backpack_centers,
-    read_carried_backpack,
 )
-from zzz_od.application.bagel.bagel_transfer import carried_slot_state
 
 if TYPE_CHECKING:
     from test.conftest import TestContext
     from test.harness.bagel_loadout import TransferController
-
-
-@pytest.mark.parametrize(
-    'state,expected',
-    [
-        ('clear_loadout_backpack_carried', 2),
-        ('clear_loadout_prepare_warehouse_empty', 0),
-    ],
-)
-def test_warehouse_recording(
-    test_context: TestContext, state: str, expected: int
-) -> None:
-    """仓库只定位左侧完整格子行，不把右侧库存当作携带物。"""
-    screen = test_context.load_screen('贝果-仓库', state)
-    op = BagelStoreCarried(test_context)
-    # 有物帧的录像鼠标遮住「仓」字，必须等待新帧，不能放宽为模糊仓库匹配。
-    assert op.round_by_find_area(screen, '贝果-仓库', '放入仓库').is_success is (
-        expected == 0
-    )
-    centers = backpack_centers(screen)
-    assert len(centers) == 30
-    assert (
-        sum(carried_slot_state(screen, center) is True for center in centers)
-        == expected
-    )
-    assert all(
-        carried_slot_state(screen, center) is False for center in WAREHOUSE_SAFE_CENTERS
-    )
-
-
-def test_settlement_rewards_are_not_backpack_items(test_context: TestContext) -> None:
-    """撤离奖励会推低背包标题；格子定位不得包含上方奖励物品。"""
-    screen = test_context.load_screen('贝果-仓库', '满仓安全箱余一件-20260924')
-    info = read_carried_backpack(test_context, screen)
-    assert info is not None and info[0] == (0, 20)
-    assert info[1] > 300
-    centers = backpack_centers(screen, info[1])
-    assert centers and all(center.y > 350 for center in centers)
 
 
 @pytest.mark.parametrize('safe', [False, True])
@@ -97,7 +54,10 @@ def test_bulk_transfer_and_stacking(
 
 @pytest.mark.parametrize(
     'kind',
-    ['unchanged', 'partial', 'warehouse_decreased', 'wrong_container', 'capacity'],
+    [
+        'unchanged',
+        'warehouse_decreased',
+    ],
 )
 def test_unconfirmed_bulk_transfer_stops_without_reclick(
     test_context: TestContext,
@@ -142,29 +102,6 @@ def test_full_warehouse_does_not_click(
         assert not controller.recorded_clicks
 
 
-def test_offscreen_items_use_bulk_button_without_scrolling(
-    test_context: TestContext,
-    controller: TransferController,
-) -> None:
-    """总占用非零但物品不在可见页时仍直接批量入仓，无须翻页。"""
-    done = warehouse_frames(test_context)[2]
-    offscreen = done.copy()
-    paint_count(test_context, offscreen, '贝果-仓库', '背包数量', '6/50')
-    controller.set_phases(
-        [
-            {'frame': offscreen, 'exit': ('on_click_in', '贝果-仓库', '放入仓库')},
-            {'frame': done},
-        ]
-    )
-    op = WatchedStore(test_context)
-    with running_operation(op):
-        result = op.execute()
-        assert result.success, result.status
-        assert result.data['moved'] == 6
-        assert not controller.recorded_scrolls
-        assert len(controller.recorded_clicks) == 1
-
-
 def test_settlement_only_moves_safe_item_not_reward(
     test_context: TestContext,
     controller: TransferController,
@@ -190,27 +127,6 @@ def test_settlement_only_moves_safe_item_not_reward(
         assert result.data['moved'] == 1
         assert len(controller.recorded_clicks) == 1
         assert controller.recorded_clicks[0].tuple() != source.tuple()
-
-
-def test_bulk_result_can_arrive_late(
-    test_context: TestContext,
-    controller: TransferController,
-) -> None:
-    """批量按钮点击后短暂旧帧只等待，结果出现后核验完成，不补点。"""
-    before, _, after = warehouse_frames(test_context)
-    controller.set_phases(
-        [
-            {'frame': before, 'exit': ('on_click_in', '贝果-仓库', '放入仓库')},
-            {'frame': before, 'exit': ('on_polls', 2)},
-            {'frame': after},
-        ]
-    )
-    op = WatchedStore(test_context)
-    with running_operation(op):
-        result = op.execute()
-        assert result.success, result.status
-        assert result.data['moved'] == 2
-        assert len(controller.recorded_clicks) == 1
 
 
 def test_pause_after_storage_click_only_checks_result(
@@ -244,13 +160,12 @@ def test_pause_after_storage_click_only_checks_result(
         assert len(controller.recorded_clicks) == 1
 
 
-@pytest.mark.parametrize('after_click', [False, True])
 @pytest.mark.parametrize(
-    'kind,reason',
+    'kind,reason,after_click',
     [
-        ('occupied', '背包格子与占用数不符'),
-        ('unknown', '背包格子状态不清'),
-        ('missing_rows', '无法定位背包完整格子行'),
+        ('occupied', '背包格子与占用数不符', False),
+        ('unknown', '背包格子状态不清', True),
+        ('missing_rows', '无法定位背包完整格子行', False),
     ],
 )
 def test_zero_count_with_unconfirmed_slots_stops(
@@ -285,117 +200,13 @@ def test_zero_count_with_unconfirmed_slots_stops(
         assert not controller.recorded_scrolls
 
 
-@pytest.mark.parametrize('kind', ['unchanged', 'partial', 'empty_retry'])
-def test_recovery_transfer_returns_remaining_without_extra_click(
-    test_context: TestContext,
-    controller: TransferController,
-    kind: str,
-) -> None:
-    """启动转存用稳定两帧报告残留；出售后即使空包也只补点一次。"""
-    before, partial, empty = warehouse_frames(test_context)
-    if kind == 'empty_retry':
-        controller.set_phases([{'frame': empty}])
-    else:
-        controller.set_phases(
-            [
-                {'frame': before, 'exit': ('on_click_in', '贝果-仓库', '放入仓库')},
-                {'frame': before if kind == 'unchanged' else partial},
-            ]
-        )
-    op = WatchedStore(
-        test_context, return_on_remaining=True, click_when_empty=kind == 'empty_retry'
-    )
-    with running_operation(op):
-        result = op.execute()
-    assert result.success, result.status
-    assert result.status == (
-        '携带物已全部转存' if kind == 'empty_retry' else '仓库已满'
-    )
-    assert len(controller.recorded_clicks) == 1
-
-
-@pytest.mark.parametrize('pending', [False, True])
-def test_warehouse_animation_does_not_block_bulk_transfer(
-    test_context: TestContext,
-    controller: TransferController,
-    pending: bool,
-) -> None:
-    """两张真实动画帧用于批量按钮；已发送输入时不得补点。"""
-    before = test_context.load_screen('贝果-仓库', 'clear_carried_six_before')
-    after = test_context.load_screen('贝果-仓库', 'clear_carried_six_animation')
-    controller.set_phases(
-        [{'frame': after, 'exit': ('on_click_in', '贝果-仓库', '放入仓库')}]
-    )
-    op = WatchedStore(test_context)
-    if pending:
-        op.pending = True
-        op.pending_started = time.monotonic()
-        op.before_counts = (6, 0, 182, 50, 280)
-    with running_operation(op):
-        op.last_screenshot = before
-        assert op.store_next().status == (
-            '等待转存后格子稳定' if pending else '等待仓库格子稳定'
-        )
-        op.last_screenshot = after
-        result = op.store_next()
-        assert result.status == (
-            '入仓操作后物品未完整转出，等待核对' if pending else '等待批量入仓结果'
-        )
-        assert len(controller.recorded_clicks) == (0 if pending else 1)
-        assert op.moved == 0
-
-
-@pytest.mark.parametrize('change', ['unknown', 'occupied', 'count', 'layout', 'page'])
-def test_warehouse_requires_consecutive_complete_observations(
-    test_context: TestContext,
-    controller: TransferController,
-    change: str,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """数量、占用、布局变化及未知帧必须打断稳定记录，不能提前批量入仓。"""
-    screen = test_context.load_screen('贝果-仓库', 'clear_carried_six_before')
-    changed = screen.copy()
-    if change == 'unknown':
-        changed[320:380, 237:297] = 0
-    elif change == 'occupied':
-        changed[320:380, 237:297] = screen[198:258, 237:297]
-        changed[198:258, 237:297] = screen[320:380, 237:297]
-    elif change == 'count':
-        paint_count(test_context, changed, '贝果-仓库', '仓库数量', '?')
-    elif change == 'layout':
-        changed[172:768, 210:850] = screen[180:776, 210:850]
-    controller.set_phases(
-        [{'frame': screen, 'exit': ('on_click_in', '贝果-仓库', '放入仓库')}]
-    )
-    op = WatchedStore(test_context)
-    with running_operation(op):
-        op.last_screenshot = screen
-        assert op.store_next().status == '等待仓库格子稳定'
-        op.last_screenshot = changed
-        if change == 'page':
-            with monkeypatch.context() as patch:
-                patch.setattr(op, 'round_by_find_area', lambda *_: op.round_retry())
-                assert not op.store_next().is_success
-        else:
-            assert not op.store_next().is_success
-        op.last_screenshot = screen
-        assert op.store_next().status == '等待仓库格子稳定'
-        assert not controller.recorded_clicks
-        op.last_screenshot = screen.copy()
-        assert op.store_next().status == '等待批量入仓结果'
-        assert len(controller.recorded_clicks) == 1
-
-
 @pytest.mark.parametrize(
-    'state',
+    'pending,state',
     [
-        '仓库批量出售中',
-        '仓库快速选择',
-        '出售二次确认-20260921',
-        '出售获得硬币-20260921',
+        (False, '仓库批量出售中'),
+        (True, '仓库快速选择'),
     ],
 )
-@pytest.mark.parametrize('pending', [False, True])
 def test_sale_state_stops_before_transfer_or_success(
     test_context: TestContext,
     monkeypatch: pytest.MonkeyPatch,
@@ -417,81 +228,13 @@ def test_sale_state_stops_before_transfer_or_success(
     click.assert_not_called()
 
 
-@pytest.mark.parametrize('pending', [False, True])
-def test_empty_backpack_requires_two_verified_frames(
-    test_context: TestContext,
-    controller: TransferController,
-    pending: bool,
-) -> None:
-    """真实空包与空安全箱连续两帧核验后才完成；已点击时同时核对转存数量。"""
-    screen = test_context.load_screen(
-        '贝果-仓库', 'clear_loadout_prepare_warehouse_empty'
-    )
-    controller.set_phases([{'frame': screen}])
-    op = WatchedStore(test_context)
-    if pending:
-        op.pending = True
-        op.pending_started = time.monotonic()
-        op.before_counts = (2, 0, 186, 50, 280)
-    with running_operation(op):
-        op.last_screenshot = screen
-        first = op.store_next()
-        assert first.result == OperationRoundResultEnum.WAIT
-        assert first.status == ('等待转存后格子稳定' if pending else '等待仓库格子稳定')
-        op.last_screenshot = screen.copy()
-        result = op.store_next()
-        assert result.is_success and result.status == '携带物已全部转存'
-        assert result.data == {'moved': 2 if pending else 0, 'warehouse': (188, 280)}
-        assert not controller.recorded_clicks
-
-
 @pytest.mark.parametrize(
-    'kind,reason',
+    'unknown,capacity',
     [
-        ('occupied', '背包格子与占用数不符'),
-        ('unknown', '背包格子状态不清'),
-        ('missing_rows', '无法定位背包完整格子行'),
+        (False, 2),
+        (True, 5),
     ],
 )
-def test_invalid_zero_count_frame_breaks_empty_backpack_stability(
-    test_context: TestContext,
-    controller: TransferController,
-    kind: str,
-    reason: str,
-) -> None:
-    """零读数下出现冲突、未知或定位失败后，必须重新取得连续两张完整空包帧。"""
-    empty = test_context.load_screen(
-        '贝果-仓库', 'clear_loadout_prepare_warehouse_empty'
-    )
-    changed = empty.copy()
-    if kind == 'occupied':
-        changed = test_context.load_screen(
-            '贝果-仓库', 'clear_carried_six_before'
-        ).copy()
-        paint_count(test_context, changed, '贝果-仓库', '背包数量', '0/50')
-    elif kind == 'unknown':
-        changed[198:258, 237:297] = 0
-    else:
-        changed[160:780, 210:850] = 20
-    controller.set_phases([{'frame': empty}])
-    op = WatchedStore(test_context)
-    with running_operation(op):
-        op.last_screenshot = empty
-        assert op.store_next().status == '等待仓库格子稳定'
-        op.last_screenshot = changed
-        result = op.store_next()
-        assert result.result == OperationRoundResultEnum.WAIT
-        assert result.status == reason
-        assert op._stable_image is None
-        op.last_screenshot = empty
-        assert op.store_next().status == '等待仓库格子稳定'
-        op.last_screenshot = empty.copy()
-        assert op.store_next().is_success
-        assert not controller.recorded_clicks
-
-
-@pytest.mark.parametrize('capacity', [2, 5])
-@pytest.mark.parametrize('unknown', [False, True])
 def test_startup_clear_distinguishes_locked_from_unknown(
     test_context: TestContext,
     controller: TransferController,

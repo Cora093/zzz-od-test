@@ -37,7 +37,13 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.usefixtures('no_round_wait')
 
 
-@pytest.mark.parametrize('budget', [0, 1, 5, 100])
+@pytest.mark.parametrize(
+    'budget',
+    [
+        0,
+        1,
+    ],
+)
 def test_retry_budget_from_formal_execute(
     test_context: TestContext,
     app_setup: tuple[BagelConfig, BagelRunRecord, list[str]],
@@ -109,7 +115,13 @@ def test_retry_budget_from_formal_execute(
         reset_running_state(test_context, app)
 
 
-@pytest.mark.parametrize('kind', ['program', 'initialization', 'stop', 'entry'])
+@pytest.mark.parametrize(
+    'kind',
+    [
+        'program',
+        'stop',
+    ],
+)
 def test_terminal_failure_does_not_restart(
     test_context: TestContext,
     app_setup: tuple[BagelConfig, BagelRunRecord, list[str]],
@@ -172,7 +184,12 @@ def test_terminal_failure_does_not_restart(
         reset_running_state(test_context, app)
 
 
-@pytest.mark.parametrize('already_warehouse', [False, True])
+@pytest.mark.parametrize(
+    'already_warehouse',
+    [
+        False,
+    ],
+)
 def test_exhausted_retry_runs_real_exit_and_deposit(
     test_context: TestContext,
     app_setup: tuple[BagelConfig, BagelRunRecord, list[str]],

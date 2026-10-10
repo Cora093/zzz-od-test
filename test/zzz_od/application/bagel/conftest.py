@@ -82,22 +82,16 @@ def record(legacy_collection: dict) -> BagelRunRecord:
 FAST_GROUPS = {'bagel_config', 'bagel_flow', 'bagel_run_record'}
 
 FAST_BEHAVIORS = {
+    'test_all_exits_remove_run_listeners',
+    'test_all_known_qualities_outrank_lower_qualities_and_unknown',
+    'test_full_return_label',
+    'test_non_contiguous_selection_skips_unchecked',
     'test_parse_capacity_pair',
     'test_parse_filter_count',
-    'test_zero_loadout',
-    'test_incomplete_values_cannot_trigger_clearing',
-    'test_entry_warning',
-    'test_expected_map_requires_high_risk',
+    'test_queued_callback_cannot_reach_finished_or_reused_operation',
+    'test_release_timed_and_drag_inputs',
     'test_same_quality_uses_hardcoded_type_order',
-    'test_all_known_qualities_outrank_lower_qualities_and_unknown',
-    'test_return_after_success',
-    'test_next_round_requires_known_empty_safe',
     'test_sequence_stops_at_failed_step',
-    'test_each_action_propagates_defeat_without_advancing',
-    'test_non_contiguous_selection_skips_unchecked',
-    'test_invalid_selection_rejected',
-    'test_handle_init_resets_failure_counts',
-    'test_full_return_label',
 }
 
 
