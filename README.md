@@ -8,4 +8,4 @@
 uv run --no-sync --env-file .env python zzz-od-test/run_bagel_tests.py fast
 ```
 
-完整回归、全仓检查、覆盖范围和计时要求见[贝果测试入口](../docs/develop/testing/bagel.md)。删减依据见[覆盖记录](BAGEL_COVERAGE.md)，素材来源缺口见[素材记录](BAGEL_MATERIALS.md)。
+完整回归、全仓检查、覆盖范围和计时要求见主仓[贝果测试入口](../docs/develop/testing/bagel.md)。当前覆盖与限制见[覆盖说明](BAGEL_COVERAGE.md)，素材来源缺口见[素材记录](BAGEL_MATERIALS.md)。
