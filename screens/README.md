@@ -1,17 +1,14 @@
-# 游戏画面截图存档(webp q90)
+# 游戏画面与测试素材
 
-按 `<screen_name>/<state>.webp` 组织,镜像 `docs/game/screens/`。用途:测试 fixtures(conftest 的 `load_screen`/`mock_screen`)+ 文档溯源。
+按画面和用途归档。
 
-## 格式约定
-- **webp q90**(有损,~100-150KB/张;已验 13 打开游戏子态识别无损,conf 损耗 <0.006)。
-- **角标模板来源例外**:贝果 `仓库角标完整-20260930`、`装备角标完整-20260930`、`电子保险箱满箱对换失败-20260930` 从原生 PNG 转为无损 WebP，保留原始像素作为完整角标画面对照。现有模板的精确裁剪矩形和处理参数尚未完整留档，不能将这些画面的识别格心视为裁剪来源；缺口见主仓 `docs/game/screens/贝果计划.md`「角标来源与裁剪缺口」。
-- **贝果精度敏感样本**:定位、细文字 OCR、物品格变化等原 PNG 样本使用无损 WebP，转换后逐像素核对一致；不对这些样本施加有损压缩。同名 WebP 已被测试使用时，不重复保留无引用的 PNG 副本。
-- **品质压缩对照**:`武备箱红底金图案-20260921-无损.webp` 保留原始像素，与同名不带「无损」后缀的有损版本共同验证品质识别，二者均为测试输入。
-- **1080p 原生**(同 screen_info `pc_rect` 坐标,**不缩放**——喂 offline analyze/流程测试时坐标才对得上)。
-- 文件名 = 子态可读名(如 `ready.webp`、`账号密码登录.webp`)。
-- **UID 打码**:右下 UID 区域涂色(对齐 `controller.fill_uid_black`),防账号信息随 fixture 外泄;识别不依赖 UID,打码无损识别。
+## 规范与来源
 
-贝果部分历史归档以有损 WebP 像素为来源，UID 遮挡后改用无损编码，不能恢复原 PNG 精度；逐图来源见 [贝果归档像素来源](bagel_archive.json)。这些素材可沿用识别回归，不作为无损模板裁剪源。
+格式、尺寸例外、来源字段、UID处理与迁移步骤统一见主仓[素材归档规范](../../docs/develop/zzz/screenshot_archive.md)。本页只维护素材索引。
+
+贝果历史像素来源见[清单](bagel_archive.json)。部分有损WebP解码后改为无损编码，不能当作原始无损采集。定位、细文字和格子变化样本保留精度；红底金图案的有损/无损对照都有测试用途。
+
+角标来源图保留归档像素，但模板裁剪与居中参数不完整。历史4K缩放图仅作已标注的回归输入；说明图和201×201定位参考图不适用整屏尺寸要求。已知缺口见[贝果素材检查记录](../BAGEL_MATERIALS.md)。
 
 ## 已归档
 - `贝果-研究站/出发切换黑屏-20261006.webp`：达塔对话点击「出发出发」后的黑屏过渡，来源为 1080p 画面。遮挡 UID 后使用无损 WebP 编码；仅用于返回与下一局入场的流程回归，不作为无损模板来源或连续实机流程的验收证据。
@@ -19,7 +16,7 @@
 - `贝果-局内/四格安全箱部分占用-20261004.webp`：四格安全箱识别样本及主仓锁图标模板的像素来源，详见[贝果素材索引](bagel_archive.json)。两格、三格及小容量仓库测试画面在运行时合成，不作为实拍归档。
 - `贝果-备战/`：`clear_loadout_carried`、`clear_loadout_empty`、`clear_loadout_tools_only`、`clear_loadout_second_weapon_stored`、`clear_loadout_weapon_detail`、`clear_loadout_equipment_detail`、`clear_loadout_item_detail`、`clear_loadout_dense_inventory`、`clear_loadout_dense_detail`、`preset_two`，用于启动清空的携带读数、槽位、详情与预设画面参考。
 - `贝果-仓库/`：`clear_loadout_backpack_carried`、`clear_loadout_prepare_warehouse_empty`、`clear_carried_six_before`、`clear_carried_six_animation`，用于批量转存、携带数量与图标动画回归。
-- 上述启动清空图均为原生 1080p 并已遮挡 UID。用于携带读数、槽位和图标变化回归的画面采用无损 WebP；仅作画面参考的 `clear_loadout_dense_detail` 与 `preset_two` 采用 WebP q90。详情及动画帧只用于对应状态，不作为稳定主画面或连续实机流程证据。裁模板使用原始 PNG，有损归档不能作为原图。具体画面事实见主仓 `docs/game/screens/贝果计划.md`「启动清空相关画面」。
+- 上述启动清空图均为原生 1080p 并已遮挡 UID。用于携带读数、槽位和图标变化回归的画面采用无损 WebP；仅作画面参考的 `clear_loadout_dense_detail` 与 `preset_two` 采用 WebP q90。详情及动画帧只用于对应状态，不作为稳定主画面或连续实机流程证据。裁模板要求可验证的来源像素和处理记录，有损归档不能冒充原图。具体画面事实见主仓 `docs/game/screens/贝果计划.md`「启动清空相关画面」。
 - `贝果-局内/电子保险箱交互-HUD错字-20260930.webp`：原生1080p失败截图，无损 WebP 并遮挡 UID，保留 `UPROAR` 被识别成 `IPROAR` 的像素，用于交互前 HUD 容错回归。
 - `打开游戏/`:ready、loading、退出登录弹窗、账号确认、账号确认-下拉、验证码登录、扫码登录、扫码成功、账号密码登录、选区服、登录服务器中、登录成功(12)
 - `加载画面/`:港口工厂旧址(lore tip 代表帧)
